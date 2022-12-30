@@ -60,6 +60,7 @@ async function run() {
         const usersCollection = client.db("petShop").collection("users");
         const bookingsCollection = client.db("petShop").collection("bookings");
         const paymentsCollection = client.db("petShop").collection("payments");
+        const cartCollection = client.db("petShop").collection("cart");
 
         //generate JWT
         app.get('/jwt', async (req, res) => {
@@ -96,6 +97,11 @@ async function run() {
 
         })
 
+        app.get('/foods/:id', async (req, res) => {
+            const food = await foodsCollection.findOne({ _id: new ObjectId(req.params.id) });
+            res.send(food);
+        })
+
         //------------------------------------------------------------------------------
         // app.get('/post', async (req, res) => {
         //     const data = [
@@ -121,13 +127,7 @@ async function run() {
         //-------------------------------------------------------------------------
 
 
-        //filter mobiles by categoryId
-        app.get('/category/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { categoryId: id };
-            const result = await foodsCollection.find(filter).toArray();
-            res.send(result);
-        })
+
 
         //save user info to database
         app.put('/users', async (req, res) => {
@@ -168,14 +168,16 @@ async function run() {
         //get my orders 
         app.get('/myOrders', verifyJwt, async (req, res) => {
             const email = req.query.email;
+            console.log(email);
             const decodedEmail = req.decoded.email;
+            console.log(decodedEmail);
             if (email !== decodedEmail) {
                 res.status(403).send({
                     message: 'Email not verified'
                 })
             }
-            const filter = { buyerEmail: email };
-            const result = await bookingsCollection.find(filter).toArray();
+            const filter = { email: email };
+            const result = await paymentsCollection.find(filter).toArray();
             res.send(result);
             console.log(result);
         })
@@ -379,12 +381,44 @@ async function run() {
         })
 
         //get single orders
-        app.get('/orders/:id', async (req, res) => {
+        app.get('/food/payment/:id', async (req, res) => {
             const id = req.params.id;
+            console.log(id);
             const query = { _id: ObjectId(id) };
-            const result = await bookingsCollection.findOne(query);
+            const result = await foodsCollection.findOne(query);
+            res.send(result);
+
+        })
+
+        //cart data
+        app.put('/cart', verifyJwt, async (req, res) => {
+            const cart = req.body;
+            console.log(cart);
+            const result = await cartCollection.insertOne(cart);
             res.send(result);
         })
+
+        //get cart data
+
+        app.get('/cart', async (req, res) => {
+            const email = req.query.email;
+
+            const filter = { email: email };
+            const result = await cartCollection.find(filter).toArray();
+            res.send(result);
+            console.log(result);
+        })
+
+        //delete from cart
+        app.delete('/deleteOne', async (req, res) => {
+            const id = req.query.id;
+            console.log(id);
+            const filter = { _id: ObjectId(id) };
+            const result = await cartCollection.deleteOne(filter);
+            res.send(result);
+            console.log(result);
+        })
+
 
         //payments
         app.post("/create-payment-intent", async (req, res) => {
