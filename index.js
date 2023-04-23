@@ -462,14 +462,62 @@ async function run() {
         })
 
 
+        //////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////subscription code //////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+        app.post('/create-subscription', async (req, res) => {
+
+            const customer = await stripe.customers.create({
+                name: req.body.name,
+                email: req.body.email,
+                payment_method: req.body.paymentMethod,
+                invoice_settings: {
+                    default_payment_method: req.body.paymentMethod
+                }
+            })
+
+            const priceId = req.body.priceId;
+
+            const subscription = await stripe.subscriptions.create({
+                customer: customer.id,
+                items: [{ price: priceId }],
+                payment_settings: {
+                    payment_method_options: {
+                        card: {
+                            request_three_d_secure: 'any',
+                        },
+                    },
+                    payment_method_types: ['card'],
+                    save_default_payment_method: 'on_subscription',
+                },
+                expand: ['latest_invoice.payment_intent'],
+            });
+
+            res.send({
+                clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+                subscriptionId: subscription.id,
+            })
+
+        })
+
+
+
 
     }
     finally {
         //not to use
     }
+
 }
 
 run().catch(console.dir);
+
 
 
 app.listen(port, () => {
